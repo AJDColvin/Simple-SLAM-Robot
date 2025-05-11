@@ -4,14 +4,12 @@ import serial
 import socket
 import threading
 
-# Receive data frame from Arduino
-
-HEADER = 64
+HEADER = 4
 SERIAL_PORT = '/dev/ttyACM0'
 BAUDRATE = 115200
 
 SOCKET_PORT = 5050
-SERVER = "192.168.0.50"   
+SERVER = "192.168.0.97"   
 ADDR = (SERVER, SOCKET_PORT)
 FORMAT = 'utf-8'
 
@@ -39,38 +37,24 @@ def readAndSend(conn, addr):
 
     while True:
         if ser.in_waiting > 0:
-            # try: 
-            #     data = ser.readline() # take RAW serial data from Arduino. Cuts off at \n.
-            #     print(f'DATA: {data}')
-
-            #     data_length = len(data)
-            #     data_length_encoded = str(data_length).encode(FORMAT)
-            #     data_length_encoded += b' ' * (HEADER - len(data_length_encoded))
-            #     print(f'HEADER: {data_length_encoded}')
-
-            #     conn.send(data_length_encoded) # <HEADER>
-            #     conn.send(data) # <DATA>
-
-            # except: # ignore if the data is invalid 
-            #     print("[ERROR] Couldn't receive serial from Arduino")
             
-            data = ser.readline() # take RAW serial data from Arduino. Cuts off at \n.
-            print(f'DATA: {data}')
-
+            data = ser.readline()  # Take RAW serial data from Arduino. Cuts off at \n.
+            
             data_length = len(data)
             data_length_encoded = str(data_length).encode(FORMAT)
-            data_length_encoded += b' ' * (HEADER - len(data_length_encoded))
-            print(f'HEADER: {data_length_encoded}')
+            data_length_encoded += b' ' * (HEADER - len(data_length_encoded)) # Pad data
+            print(f'HEADER: {data_length_encoded}', end ="    ")
+            print(f'DATA: {data}')
 
-            conn.send(data_length_encoded) # <HEADER>
-            conn.send(data) # <DATA>
 
-        # Send to client (base station)
+            conn.send(data_length_encoded)  # <HEADER>
+            conn.send(data)  # <DATA>
+
 
 
 while True:
 
-    conn, addr = server.accept() # Accept clients 
+    conn, addr = server.accept()  # Accept clients 
 
     thread = threading.Thread(target = readAndSend, args = (conn, addr))
     thread.start()
