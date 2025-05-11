@@ -2,10 +2,12 @@
 # RasPi = SERVER, Base station (laptop) = CLIENT
 import serial
 import socket
+import threading
 
 # Receive data frame from Arduino
 
-SERIAL_PORT = '/dev/ttyACM1'
+HEADER = 64
+SERIAL_PORT = '/dev/ttyACM0'
 BAUDRATE = 115200
 
 SOCKET_PORT = 5050
@@ -32,23 +34,47 @@ server.listen()
 print(f'Socket connection established @ {SOCKET_PORT}')
 
 
+def readAndSend(conn, addr):
+    print('in readAndSend')
+
+    while True:
+        if ser.in_waiting > 0:
+            # try: 
+            #     data = ser.readline() # take RAW serial data from Arduino. Cuts off at \n.
+            #     print(f'DATA: {data}')
+
+            #     data_length = len(data)
+            #     data_length_encoded = str(data_length).encode(FORMAT)
+            #     data_length_encoded += b' ' * (HEADER - len(data_length_encoded))
+            #     print(f'HEADER: {data_length_encoded}')
+
+            #     conn.send(data_length_encoded) # <HEADER>
+            #     conn.send(data) # <DATA>
+
+            # except: # ignore if the data is invalid 
+            #     print("[ERROR] Couldn't receive serial from Arduino")
+            
+            data = ser.readline() # take RAW serial data from Arduino. Cuts off at \n.
+            print(f'DATA: {data}')
+
+            data_length = len(data)
+            data_length_encoded = str(data_length).encode(FORMAT)
+            data_length_encoded += b' ' * (HEADER - len(data_length_encoded))
+            print(f'HEADER: {data_length_encoded}')
+
+            conn.send(data_length_encoded) # <HEADER>
+            conn.send(data) # <DATA>
+
+        # Send to client (base station)
+
+
 while True:
 
-    conn, addr = server.accept() # Accept clients #TODO: THIS IS BLOCKING OPEN NEW THREAD
+    conn, addr = server.accept() # Accept clients 
 
-    # Read serial inputs from Arudino
+    thread = threading.Thread(target = readAndSend, args = (conn, addr))
+    thread.start()
 
-    print("in the loop")
-    if ser.in_waiting > 0:
-        print('data found')
-        try: 
-            data = ser.readline().decode().rstrip() # take RAW serial data from Arduino
-            print(data)
-            
-        except: # ignore if the data is invalid 
-            print("[ERROR] Couldn't receive serial from Arduino")
 
-    # Send to client (base station)
-    conn.send(data)
 
 
